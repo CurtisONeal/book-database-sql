@@ -7,6 +7,8 @@
 # Windows: python -m venv env
 # .\env\Scripts\activate
 
+# If running tests in interactive python do the installs
+
 # Both:
 #     pip install sqlalchemy
 #     pip freeze > requirements.txt
@@ -25,13 +27,40 @@
 # starting up the app reminder to test for typos:
 # python3 app.py # to see the db created
 
-debug = False
+debug = True
 
 # imports 
-from models import(Base, session, 
-                   Book, engine)  #get our def initions models.py
+# 
+# get our def initions models.py
+#import models
 import datetime
 import csv
+
+# #models doesn't seem to be importing across all of these
+from sqlalchemy import( create_engine, Column, Integer, String, Date)
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base
+# from sqlalchemy.ext.declarative import declarative_base
+
+engine = create_engine('sqlite:///books.db',echo=True)  # creates a local database on your machine
+#This connect cimplictly makes a db at least locally if you makd a typo
+
+#Sessions keep track of everything you want to add or do
+Session = sessionmaker(bind=engine) #binds our session to the database
+Base = declarative_base()
+
+session = Session()
+
+
+class Book(Base):
+    __tablename__ = 'books'
+    id = Column(Integer, primary_key=True)
+    title = Column('Title', String) # By passing the string in, we make the db column name Title
+    author = Column('Author', String) 
+    published_date = Column('Published', Date)
+    price = Column('Price', Integer)
+    def __repr__(self):
+        return f'Title: {self.title}, Author: {self.author}, Date Published: {self.published_date}, Price: {self.price}'
 
 
 # main menu - add, search, analysis, exit, view 
@@ -78,6 +107,14 @@ def clean_date(date_str):
         print(datetime.date(year, month, day)) # needs the yead, month, day as int
     return datetime.date(year, month, day)
 
+def clean_price(price_str):
+    """ will take the csv content from a field and remove the period to make an int"""
+    price_float = float(price_str)
+    if debug:
+        print(price_float)
+        print(int(price_float * 100))
+    return int(price_float) * 100 # price is in cents
+
 # add data from csv
 def add_csv():
     """
@@ -87,9 +124,20 @@ def add_csv():
     with open('/Users/curtisoneal/Documents/DataScience/TreeHouse SQLAlchemy/book-database/suggested_books.csv') as csvfile:
         data = csv.reader(csvfile)
         for row in data:
-            print(row)
-
-
+            book_in_db = session.query(Book).filter(Book.title == row[0] ).one_or_none() 
+            # returns a book if there is one or none if not. 
+            if book_in_db == None:
+                if debug:
+                    print(row)
+                title = row[0]
+                author = row[1]
+                date = clean_date(row[2])
+                price = clean_price(row[3])
+                new_book = Book(title=title, author=author, published_date=date, price=price)
+                session.add(new_book)
+        session.commit()
+    return 0
+            
 # loop running the pogram
 def app():
     app_running = True
@@ -116,7 +164,9 @@ def app():
 
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
+    #Base.metadata.create_all()
     #app()
-    #add_csv()
-    clean_date('July 1, 2015')
-    clean_date('May 3, 2019')  
+    add_csv()
+    
+    for book in session.query(Book):
+        print(book)
