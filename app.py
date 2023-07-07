@@ -43,7 +43,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
 # from sqlalchemy.ext.declarative import declarative_base
 
-engine = create_engine('sqlite:///books.db',echo=True)  # creates a local database on your machine
+engine = create_engine('sqlite:///books.db',echo=False)  # creates a local database on your machine
 #This connect cimplictly makes a db at least locally if you makd a typo
 
 #Sessions keep track of everything you want to add or do
@@ -130,6 +130,28 @@ def clean_price(price_str):
     else:
         return int(price_float) * 100 # price is in cents
 
+def clean_id(id_str, options):
+    """ will take input choice as str check if a numeral and make an int"""
+    try:
+        book_id = int(id_str)
+    except ValueError:
+            input('''
+                \n ****** ID ERROR *******
+                \rThe ID should be a number
+                \rPress enter to try again.
+                \r************************** ''')
+            return
+    else:
+        if book_id in options:
+            return book_id
+        else:
+            input(f'''
+                \n ****** ID ERROR *******
+                \rOption: {options}
+                \rPress enter to try again.
+                \r************************** ''')
+            return
+
 # add data from csv
 def add_csv():
     """
@@ -186,7 +208,26 @@ def app():
             input('\nPress enter to return to the main menu. ')
         elif choice == '3':
             # TODO Search book
-            pass      
+            id_options = []
+            for book in session.query(Book):
+                id_options.append(book.id) 
+            id_error = True
+            while id_error:
+                id_choice = input(f'''.
+                    \nId Options: {id_options}
+                    \rBook id: ''')  
+                id_choice = clean_id(id_choice, id_options)
+                if id_choice in id_options:
+                    selected_book = session.query(Book).filter(Book.id == id_choice ).first() 
+                    print(f'''
+                          \nYou chose:
+                          \r{selected_book.title} by {selected_book.author}
+                          \rPublished: {selected_book.published_date}
+                          \rPrice: ${selected_book.price / 100:.2f}''')
+                    id_error = False
+                    input('\nPress enter to return to the main menu. ')
+                #else:
+                #    print(f'{id_choice} was not in the options please try again. ')
         elif choice == '4':
             # TODO book Analysis
             pass 
