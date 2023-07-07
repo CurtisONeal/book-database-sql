@@ -35,6 +35,7 @@ debug = True
 #import models
 import datetime
 import csv
+import time
 
 # #models doesn't seem to be importing across all of these
 from sqlalchemy import( create_engine, Column, Integer, String, Date)
@@ -96,24 +97,38 @@ def clean_date(date_str):
               'July', 'August', 'September', 'October', 'November', 'December']
     split_date = date_str.split(' ')
     #using the index of the list where 0 = January and adding the index to it.abs
-    month = int(months_list.index( split_date[0] ) + 1) 
-    day =  int(split_date[1].split(',')[0]) #This cuts off the string from the comma and only keeps the string
-    year = int(split_date[2])  
-    if debug:
-        print(split_date)
-        print(month)
-        print(day)
-        print(year) 
-        print(datetime.date(year, month, day)) # needs the yead, month, day as int
-    return datetime.date(year, month, day)
+
+    try:
+        month = int(months_list.index( split_date[0] ) + 1) 
+        day =  int(split_date[1].split(',')[0]) #This cuts off the string from the comma and only keeps the string
+        year = int(split_date[2])  
+        return_date = datetime.date(year, month, day)
+    except ValueError:
+        input('''
+              \n ****** DATE ERROR *******
+              \rThe Date fomat should include a valid Month Day, Year from the past.
+              \rEx: January 13, 2003
+              \rPress enter to try again: 
+               \r************************** ''')
+            #print(datetime.date(year, month, day)) # needs the yead, month, day as int  
+        return None
+    else:
+        return return_date
 
 def clean_price(price_str):
     """ will take the csv content from a field and remove the period to make an int"""
-    price_float = float(price_str)
-    if debug:
-        print(price_float)
-        print(int(price_float * 100))
-    return int(price_float) * 100 # price is in cents
+    try:
+        price_float = float(price_str)
+    except ValueError:
+            input('''
+            \n ****** PRICE ERROR *******
+            \rThe Price fomat should be a number without a currency symbol 
+            \r followed by a decimal and two numbers.
+            \rEx: 20.31
+            \rPress enter to try again: 
+            \r************************** ''')
+    else:
+        return int(price_float) * 100 # price is in cents
 
 # add data from csv
 def add_csv():
@@ -145,7 +160,25 @@ def app():
         choice = menu() # the return value from choice
         if choice == '1':
             # TODO add book
-            pass
+            title = input('Title: ')
+            author = input('Author: ')
+            date_error = True
+            while date_error:
+                date = input('Date Published (Ex: October 25, 2017): ') # edge February 31, 2004 doesn't exist
+                date = clean_date(date)
+                if type(date) == datetime.date:
+                    date_error = False
+            price_error = True
+            while price_error:
+                price = input('Price (Ex: 25.56): ') # edge case $5.99
+                price = clean_price(price)
+                if type(price) == int:
+                    price_error = False
+            new_book = Book( title=title, author=author, published_date= date, price= price_error)
+            session.add(new_book)
+            session.commit()
+            print('Book Added!')
+            time.sleep(1.5)
         elif choice == '2':
             # TODO View all books
             pass
@@ -164,9 +197,8 @@ def app():
 
 if __name__ == '__main__':
     Base.metadata.create_all(engine)
-    #Base.metadata.create_all()
-    #app()
     add_csv()
+    app()
     
     for book in session.query(Book):
         print(book)
