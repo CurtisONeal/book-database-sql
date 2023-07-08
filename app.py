@@ -284,12 +284,21 @@ def app():
                         print('Book deleted!')
                         time.sleep(1.5)
                         # Note 3 will automatically jomp to the top.
-                    
-                #else:
-                #    print(f'{id_choice} was not in the options please try again. ')
         elif choice == '4':
-            # TODO book Analysis
-            pass 
+            # TODO book Analysis oldest, newest, and total number in db.
+            oldest_book = session.query(Book).order_by(Book.published_date).first()
+            newest_book = session.query(Book).order_by(Book.published_date.desc()).first()
+            total_books = session.query(Book).count()
+            python_books = session.query(Book).filter(Book.title.like('%ython%')).count()
+            print(f'''
+                  \n**** BOOOK ANALYSIS ****
+                  \rOldest Book: {oldest_book}
+                  \rNewest Book: {newest_book}
+                  \rTotal Books: {total_books}
+                  \rNumber of Python Books: {python_books} 
+                  ''') #Todo could make formatting nice - like prices
+            input("\nPress Enter to return to main menu. ")
+
         else: 
             # TODO exit app -- our menu function is ensuring that we can only get strings 1-5
             print('GOODBYE')
